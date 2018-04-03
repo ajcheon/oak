@@ -2,7 +2,7 @@ library(ggplot2)
 library(reshape2)
 library(plyr)
 
-df = read.csv("oakSecWaitTimes.csv")
+df = read.csv("./csvs/oakSecWaitTimes.csv")
 summary(df)
 
 meltedDf = melt(df, value.name = "waitTimes")
