@@ -29,8 +29,13 @@ ui <- fluidPage(
          
          conditionalPanel(
              condition = "input.plotTypeSelect == 'box'",
-             checkboxInput("boxByCitizenship", label = "By citizenship only", value = TRUE),
-             checkboxInput("facetSelect", label = "Facet by time interval", value = FALSE)
+             radioButtons("boxplotXSelect", label = NULL,
+                          choices = c("By citizenship only" = "citizenship",
+                                      "By time interval" = "time")),
+             conditionalPanel(
+                 condition = "input.boxplotXSelect == 'time'",
+                 checkboxInput("facetSelect", label = "Facet by time interval", value = FALSE)
+             )
          )
       ),
       
@@ -64,12 +69,11 @@ server <- function(input, output) {
         }
         else if (input$plotTypeSelect == "box") {
             output$mainPlot <- renderPlot({
-                x = ifelse(input$boxByCitizenship == TRUE, "citizenship", "time")
+                p = ggplot(waitTimesMelted(), aes_string(input$boxplotXSelect, "waitTimes")) +
+                        geom_boxplot(aes(fill=citizenship))
                 
-                p = ggplot(waitTimesMelted(), aes_string(x, "waitTimes")) +
-                    geom_boxplot(aes(fill=citizenship))
-                if (input$facetSelect) {
-                    p = p + facet_wrap( ~ time, scales="free")
+                if (input$boxplotXSelect == "time" && input$facetSelect) {
+                    return (p + facet_wrap( ~ time, scales="free"))
                 }
                 return(p)
             })
