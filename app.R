@@ -15,20 +15,28 @@ ui <- fluidPage(
    # Application title
    titlePanel("OAK Airport Security Wait Times"),
    
-   # Sidebar with a slider input for number of bins 
    sidebarLayout(
       sidebarPanel(
          # Select plot type -- hist, density, scatter, box
          selectInput("plotTypeSelect", "Plot Type", c("histogram", "density", "scatter", "box")),
          
-         # Select axes if "scatter" plot type chosen
-         uiOutput("xAxis"),
-         uiOutput("yAxis")
+         conditionalPanel(
+             condition = "input.plotTypeSelect == 'scatter'",
+             selectInput("xAxisSelect", "x axis", c("waitUsCitizen", "waitNonCitizen"), selected = "waitUsCitizen"),
+             selectInput("yAxisSelect", "y axis", c("waitUsCitizen", "waitNonCitizen"), selected = "waitNonCitizen"),
+             sliderInput("geomPointSize", "Point size", 1, 5, 2, step = 0.5)
+         ),
+         
+         conditionalPanel(
+             condition = "input.plotTypeSelect == 'box'",
+             checkboxInput("boxByCitizenship", label = "By citizenship only", value = TRUE),
+             checkboxInput("facetSelect", label = "Facet by time interval", value = FALSE)
+         )
       ),
       
       # Show a plot of the generated distribution
       mainPanel(
-         plotOutput("distPlot")
+         plotOutput("mainPlot")
       )
    )
 )
@@ -40,21 +48,34 @@ server <- function(input, output) {
     waitTimes = reactiveVal(waitTimes)
     waitTimesMelted = reactiveVal(waitTimesMelted)
     
-    observe ({
-        if (input$plotTypeSelect == "scatter") {
-            cat("scatter chosen")
-            output$xAxis = renderUI({
-                selectInput("xAxisSelect", "y axis", c("waitUsCitizen", "waitNonCitizen"), selected = "waitUsCitizen")
+    observe({
+        
+        if (input$plotTypeSelect == "histogram") {
+            output$mainPlot <- renderPlot({
+                ggplot(waitTimesMelted(), aes(waitTimes, col = "red")) +
+                    geom_histogram(position = "identity", binwidth = 5)
             })
-            output$yAxis = renderUI({
-                selectInput("yAxisSelect", "x axis", c("waitUsCitizen", "waitNonCitizen"), selected = "waitNonCitizen")
+        }
+        else if (input$plotTypeSelect == "scatter") {
+            output$mainPlot <- renderPlot({
+                ggplot(waitTimes(), aes_string(input$xAxisSelect, input$yAxisSelect, color = "time")) +
+                    geom_point(size = input$geomPointSize)
+            })    
+        }
+        else if (input$plotTypeSelect == "box") {
+            output$mainPlot <- renderPlot({
+                x = ifelse(input$boxByCitizenship == TRUE, "citizenship", "time")
+                
+                p = ggplot(waitTimesMelted(), aes_string(x, "waitTimes")) +
+                    geom_boxplot(aes(fill=citizenship))
+                if (input$facetSelect) {
+                    p = p + facet_wrap( ~ time, scales="free")
+                }
+                return(p)
             })
         }
     })
-    
-    output$distPlot <- renderPlot({
-        ggplot(waitTimes(), aes_string(input$xAxisSelect, input$yAxisSelect)) + geom_point()
-   })
+    output$checkboxValue = renderText({input$checkbox})
 }
 
 # Run the application 
