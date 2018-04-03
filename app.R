@@ -6,7 +6,7 @@ library(plyr)
 # Read CSV file
 # Melt such that citizen type is a factor with levels waitUsCitizen, waitNonCitizen
 waitTimes = read.csv("csvs/oakSecWaitTimes.csv")
-waitTimesMelted = melt(df, variable.name = "citizenship", value.name = "waitTimes")
+waitTimesMelted = melt(waitTimes, variable.name = "citizenship", value.name = "waitTimes")
 
 # Define UI
 # Widgets: plot type (hist, density)
@@ -18,7 +18,12 @@ ui <- fluidPage(
    sidebarLayout(
       sidebarPanel(
          # Select plot type -- hist, density, scatter, box
-         selectInput("plotTypeSelect", "Plot Type", c("histogram", "density", "scatter", "box")),
+         selectInput("plotTypeSelect", "Plot Type", c("histogram", "scatter", "box")),
+         
+         conditionalPanel(
+             condition = "input.plotTypeSelect == 'histogram'",
+             sliderInput("histBinWidth", "Bin width", 1, 15, 5, step = 1)
+         ),
          
          conditionalPanel(
              condition = "input.plotTypeSelect == 'scatter'",
@@ -57,8 +62,8 @@ server <- function(input, output) {
         
         if (input$plotTypeSelect == "histogram") {
             output$mainPlot <- renderPlot({
-                ggplot(waitTimesMelted(), aes(waitTimes, col = "red")) +
-                    geom_histogram(position = "identity", binwidth = 5)
+                ggplot(waitTimesMelted(), aes(waitTimes, fill = citizenship)) +
+                    geom_histogram(binwidth = input$histBinWidth)
             })
         }
         else if (input$plotTypeSelect == "scatter") {
@@ -77,6 +82,9 @@ server <- function(input, output) {
                 }
                 return(p)
             })
+        }
+        else {
+            stop("Seleted plot type is not histogram, scatter, or box.")
         }
     })
     output$checkboxValue = renderText({input$checkbox})
