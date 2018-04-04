@@ -18,7 +18,7 @@ ui <- fluidPage(
    sidebarLayout(
       sidebarPanel(
          # Select plot type -- hist, density, scatter, box
-         selectInput("plotTypeSelect", "Plot Type", c("histogram", "scatter", "box")),
+         selectInput("plotTypeSelect", "Plot Type", c("histogram", "scatter", "bar", "box")),
          
          conditionalPanel(
              condition = "input.plotTypeSelect == 'histogram'",
@@ -71,6 +71,20 @@ server <- function(input, output) {
                 ggplot(waitTimes(), aes_string(input$xAxisSelect, input$yAxisSelect, color = "time")) +
                     geom_point(size = input$geomPointSize)
             })    
+        }
+        else if (input$plotTypeSelect == "bar") {
+            output$mainPlot <- renderPlot({
+                df = ddply(waitTimes(),
+                           .(time),
+                           summarize,
+                           meanWaitTimeUsCitizen = mean(waitUsCitizen),
+                           meanWaitTimeNonCitizen = mean(waitNonCitizen))
+                df = melt(df, variable.name = "citizenship", value.name = "meanWaitTime")
+                
+                ggplot(df, aes(time, y = meanWaitTime, fill = citizenship)) + 
+                    geom_bar(position = "dodge", stat = "identity") + 
+                    theme(axis.text.x = element_text(angle = 60, hjust = 1))
+            })
         }
         else if (input$plotTypeSelect == "box") {
             output$mainPlot <- renderPlot({
